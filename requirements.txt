@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+streamlit
+langchain
+langchain-community
+langgraph
+chromadb
+pypdf
+pytest
+evaluate
+rouge-score
+huggingface-hub
+sentence-transformers
+requests
+httpx
+pydantic
+python-multipart
