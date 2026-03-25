@@ -33,7 +33,17 @@ class LLMSkillExtractor:
             return self._safe_json_extract(response)
 
     def _safe_json_extract(self, text):
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        return {} 
+        # Remove markdown code blocks if present
+        text = re.sub(r'```(?:json)?\n?(.*?)\n?```', r'\1', text, flags=re.DOTALL).strip()
+        
+        # Try to find the outermost brackets assuming the LLM might have added conversational filler
+        try:
+            start_idx = text.find('{')
+            end_idx = text.rfind('}')
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                json_str = text[start_idx:end_idx+1]
+                return json.loads(json_str)
+        except Exception:
+            pass
+            
+        return {}

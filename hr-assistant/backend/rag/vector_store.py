@@ -3,6 +3,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_ollama import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
+from langchain_community.document_loaders import PyPDFDirectoryLoader
 
 
 class VectorStoreManager:
@@ -54,4 +55,27 @@ class VectorStoreManager:
 
         return "Resume stored successfully"
 
-    
+    # ---------------- LOAD DOCUMENTS ----------------
+    def load_and_index_documents(self, data_dir):
+        """
+        Load policies/documents from a directory and index them into Chroma.
+        Returns the number of chunks added.
+        """
+        if not os.path.exists(data_dir):
+            return 0
+            
+        loader = PyPDFDirectoryLoader(data_dir)
+        docs = loader.load()
+        
+        if not docs:
+            return 0
+            
+        chunks = self.splitter.split_documents(docs)
+        
+        vectorstore = self.load_vector_store()
+        vectorstore.add_documents(chunks)
+        
+        return len(chunks)
+
+# Create singleton instance
+vstore_manager = VectorStoreManager()
