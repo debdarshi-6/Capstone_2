@@ -1,64 +1,27 @@
-from langchain_community.llms import Ollama
-import json
-from pydantic import BaseModel
-from typing import List, Optional
+from langchain_core.prompts import PromptTemplate
+import sys
+import os
 
+# Ensure backend imports work
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from backend.models.llm_engine import get_llm
 
-class CandidateInfo(BaseModel):
-    skills: List[str]
-    experience: Optional[str] = None
-    location: Optional[str] = None
+def extract_skills(text: str) -> list[str]:
+    """
+    Extracts a list of skills from the provided resume text using the LLM.
+    """
+    llm = get_llm()
+    prompt = PromptTemplate.from_template(
+        "You are an expert HR AI Assistant. Extract a concise list of professional skills from the following resume text. Return ONLY a comma-separated list of skills.\n\nResume Text:\n{text}\n\nSkills:"
+    )
+    chain = prompt | llm
+    response = chain.invoke({"text": text})
     
-from langchain_community.llms import Ollama
-import json
-
-class LLMSkillExtractor:
-    def __init__(self):
-        self.llm = Ollama(model="mistral")
-
-    def extract(self, text: str) -> CandidateInfo:
-        prompt = f"""
-        You are an AI HR assistant.
-
-        Extract the following details:
-
-        1. Skills (technical only)
-        2. Experience (number only)
-        3. Location with constraint (VERY IMPORTANT)
-
-        Location Rules:
-        - If location is mandatory → return: "City (mandatory)"
-        - If preferred → return: "City (preferred)"
-        - If remote → return: "Remote"
-        - If just location mentioned → return: "City"
-        - If nothing → return null
-
-        Return ONLY JSON:
-
-        {{
-        "skills": ["skill1", "skill2"],
-        "experience": number or null,
-        "location": "formatted string or null"
-        }}
-
-        Text:
-        {text}
-        """
-
-        response = self.llm.invoke(prompt)
-
-        # 🔥 Clean JSON
-        try:
-            json_start = response.find("{")
-            json_end = response.rfind("}") + 1
-            clean_json = response[json_start:json_end]
-
-            data = json.loads(clean_json)
-        except:
-            data = {
-                "skills": [],
-                "experience": None,
-                "location": None
-            }
-
-        return CandidateInfo(**data)
+    # Process the output
+    if hasattr(response, 'content'):
+        output_text = response.content
+    else:
+        output_text = str(response)
+        
+    skills = [s.strip() for s in output_text.split(",") if s.strip()]
+    return skills
